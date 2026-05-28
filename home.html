@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OCT Skin Analyzer · Universal v3</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;600;800&display=swap');
+:root{
+  --bg:#07080f;--surf:#0d0f1a;--surf2:#131625;--bord:#1e2235;
+  --acc:#00e5ff;--gold:#ffd700;--org:#ff9900;--grn:#39ff97;
+  --pink:#ff6b9d;--purple:#c084fc;--text:#e8ecf4;--mute:#5a6080;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden}
+body{font-family:'JetBrains Mono',monospace;background:var(--bg);color:var(--text);display:flex;flex-direction:column}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,229,255,.015) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.015) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+.hdr{z-index:10;padding:10px 20px;border-bottom:1px solid var(--bord);display:flex;align-items:center;gap:12px;background:var(--surf);flex-shrink:0}
+.logo{width:28px;height:28px;background:var(--acc);clip-path:polygon(50% 0%,100% 25%,100% 75%,50% 100%,0% 75%,0% 25%);flex-shrink:0;animation:hexPulse 3s ease-in-out infinite}
+@keyframes hexPulse{0%,100%{box-shadow:0 0 0 0 rgba(0,229,255,.4)}50%{box-shadow:0 0 0 8px rgba(0,229,255,0)}}
+.hdr h1{font-family:'Syne',sans-serif;font-size:1.1rem;font-weight:800}
+.hdr h1 span{color:var(--acc)}
+.hdr-sub{font-size:.52rem;color:var(--mute);letter-spacing:2px;text-transform:uppercase}
+.hdr-badges{margin-left:auto;display:flex;gap:4px}
+.badge{font-size:.49rem;padding:2px 7px;letter-spacing:1px;text-transform:uppercase;border:1px solid;background:transparent}
+.b-a{color:var(--acc);border-color:rgba(0,229,255,.3)}.b-g{color:var(--gold);border-color:rgba(255,215,0,.3)}.b-p{color:var(--purple);border-color:rgba(192,132,252,.3)}
+.modebar{z-index:15;display:flex;align-items:center;background:var(--surf2);border-bottom:2px solid var(--bord);padding:0 16px;flex-shrink:0}
+.modeBtn{font-family:'JetBrains Mono',monospace;font-size:.6rem;letter-spacing:2px;text-transform:uppercase;padding:10px 18px;border:none;background:transparent;color:var(--mute);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:.2s}
+.modeBtn.active{border-bottom-color:var(--acc);color:var(--acc)}
+.modeBtn:hover:not(.active){color:var(--text)}
+.mode-info{margin-left:auto;font-size:.5rem;color:var(--mute);letter-spacing:1px}
+.app-body{flex:1;display:flex;overflow:hidden;position:relative;z-index:1}
+.sb{width:268px;flex-shrink:0;border-right:1px solid var(--bord);display:flex;flex-direction:column;background:var(--surf);overflow-y:auto}
+.content{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
+.sec{padding:10px 12px;border-bottom:1px solid var(--bord)}
+.sh{font-family:'Syne',sans-serif;font-size:.54rem;letter-spacing:2.5px;text-transform:uppercase;color:var(--mute);margin-bottom:8px;display:flex;align-items:center;gap:5px}
+.sh::before{content:'';width:3px;height:8px;background:var(--acc);display:block;flex-shrink:0}
+.sh .tag{font-size:.44rem;color:var(--gold);margin-left:auto}
+.note{background:rgba(0,229,255,.04);border-left:2px solid rgba(0,229,255,.35);padding:5px 8px;font-size:.53rem;color:var(--mute);line-height:1.6;margin-bottom:7px}
+.note b{color:var(--acc)}
+.upz{border:1.5px dashed var(--bord);padding:10px 8px;text-align:center;cursor:pointer;transition:.2s;position:relative;overflow:hidden;margin-bottom:4px}
+.upz:hover,.upz.drag{border-color:var(--acc);background:rgba(0,229,255,.04)}
+.upz input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.upz-ico{font-size:1.1rem;display:block;color:var(--mute);margin-bottom:2px}
+.upz p{font-size:.55rem;color:var(--mute);line-height:1.4}
+.upz strong{color:var(--acc)}
+.upz.loaded{border-color:var(--grn)}
+.upz.loaded .upz-ico{color:var(--grn)}
+.dual{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.img-tag{font-size:.49rem;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:3px}
+.img-tag.i1{color:var(--gold)}.img-tag.i2{color:var(--pink)}
+.img-name{font-size:.48rem;color:var(--mute);text-align:center;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ctrl{margin-bottom:6px}
+.cl{font-size:.52rem;color:var(--mute);text-transform:uppercase;letter-spacing:1px;margin-bottom:2px;display:flex;justify-content:space-between}
+.cl span{color:var(--gold);font-size:.59rem}
+input[type=range]{width:100%;-webkit-appearance:none;height:3px;background:var(--bord);outline:none;border-radius:2px}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:11px;height:11px;background:var(--acc);border-radius:50%;cursor:pointer}
+.toggle-row{display:flex;align-items:center;gap:7px;margin-bottom:4px}
+.tog{position:relative;width:24px;height:13px;flex-shrink:0}
+.tog input{opacity:0;width:0;height:0}
+.tk{position:absolute;inset:0;background:var(--bord);cursor:pointer;border-radius:13px;transition:.2s}
+.tk::before{content:'';position:absolute;left:2px;top:2px;width:9px;height:9px;background:white;border-radius:50%;transition:.2s}
+.tog input:checked+.tk{background:var(--acc)}
+.tog input:checked+.tk::before{transform:translateX(11px)}
+.tl{font-size:.57rem;color:var(--text);cursor:pointer;flex:1}
+.btn{width:100%;padding:8px 10px;font-family:'JetBrains Mono',monospace;font-size:.59rem;letter-spacing:1.5px;text-transform:uppercase;border:none;cursor:pointer;transition:.2s;margin-bottom:5px;position:relative;overflow:hidden}
+.bp{background:var(--acc);color:var(--bg);font-weight:700}
+.bp:hover{background:#33eeff}
+.bs{background:transparent;color:var(--text);border:1px solid var(--bord)}
+.bs:hover{border-color:var(--acc);color:var(--acc)}
+.btn:disabled{opacity:.28;cursor:not-allowed}
+.btn.ld::after{content:'';position:absolute;top:0;left:-100%;width:100%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.2),transparent);animation:shimmer 1s infinite}
+@keyframes shimmer{to{left:100%}}
+.mg{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-top:4px}
+.mc{background:var(--surf2);border:1px solid var(--bord);padding:6px 8px}
+.ml{font-size:.45rem;color:var(--mute);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:1px}
+.mv{font-family:'Syne',sans-serif;font-size:.8rem;font-weight:700;color:var(--gold)}
+.mv.acc{color:var(--acc)}.mv.pink{color:var(--pink)}.mv.grn{color:var(--grn)}
+.mu{font-size:.42rem;color:var(--mute);margin-left:2px}
+.mc.acc-b{border-color:rgba(0,229,255,.25)}.mc.gold-b{border-color:rgba(255,215,0,.25)}.mc.pink-b{border-color:rgba(255,107,157,.25)}.mc.grn-b{border-color:rgba(57,255,151,.25)}
+.prog{height:2px;background:var(--bord);overflow:hidden;margin-top:3px}
+.pf{height:100%;background:var(--acc);width:0%;transition:width .15s}
+.cr{display:flex;align-items:center;gap:5px;margin-bottom:3px}
+.cd{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.cn{font-size:.55rem;color:var(--text);flex:1}
+input[type=color]{width:22px;height:15px;border:1px solid var(--bord);background:none;cursor:pointer;padding:1px}
+.statusbar{padding:5px 14px;border-bottom:1px solid var(--bord);display:flex;align-items:center;gap:10px;font-size:.56rem;color:var(--mute);background:var(--surf);flex-shrink:0}
+.statusbar .sep{width:1px;height:10px;background:var(--bord)}
+.sdot{width:5px;height:5px;border-radius:50%;background:var(--mute);flex-shrink:0;animation:blink 2s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.view-tabs{display:flex;border-bottom:1px solid var(--bord);background:var(--surf2);flex-shrink:0}
+.view-tab{flex:1;padding:7px 3px;font-family:'JetBrains Mono',monospace;font-size:.5rem;letter-spacing:1px;text-transform:uppercase;background:transparent;color:var(--mute);border:none;border-bottom:2px solid transparent;cursor:pointer;transition:.2s;margin-bottom:-1px;white-space:nowrap}
+.view-tab.on{color:var(--acc);border-bottom-color:var(--acc)}
+.view-tab:hover:not(.on){color:var(--text)}
+.tool-bar{display:flex;align-items:center;gap:1px;padding:4px 10px;border-bottom:1px solid var(--bord);background:var(--surf);flex-shrink:0;flex-wrap:wrap;gap:3px}
+.tool-btn{padding:4px 8px;font-family:'JetBrains Mono',monospace;font-size:.51rem;letter-spacing:1px;text-transform:uppercase;background:transparent;color:var(--mute);border:1px solid transparent;cursor:pointer;transition:.2s}
+.tool-btn.on{background:rgba(0,229,255,.1);color:var(--acc);border-color:rgba(0,229,255,.3)}
+.tool-btn:hover:not(.on){color:var(--text);border-color:var(--bord)}
+.tool-sep{width:1px;height:14px;background:var(--bord);margin:0 3px}
+.tool-label{font-size:.48rem;color:var(--mute);text-transform:uppercase;letter-spacing:1.5px}
+.tool-range-wrap{display:flex;align-items:center;gap:4px;font-size:.49rem;color:var(--mute)}
+.tool-range-wrap input[type=range]{width:55px}
+.cw{flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.cw canvas{display:block;max-width:100%;max-height:100%;object-fit:contain}
+.emp{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--mute);pointer-events:none}
+.emp-ico{font-size:2.5rem;opacity:.15}
+.emp p{font-size:.65rem;opacity:.33;text-align:center;line-height:1.9}
+.chart-wrap{flex:1;display:flex;flex-direction:column;padding:10px 14px 6px;overflow:hidden}
+.chart-hdr{display:flex;align-items:center;gap:10px;margin-bottom:7px;flex-shrink:0;flex-wrap:wrap;gap:5px}
+.chart-hdr h3{font-family:'Syne',sans-serif;font-size:.65rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--acc)}
+.chart-legend{display:flex;gap:8px;margin-left:auto;flex-wrap:wrap}
+.cl-item{display:flex;align-items:center;gap:3px;font-size:.5rem;color:var(--mute)}
+.cl-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+#annotChart{flex:1;display:block;min-height:0}
+/* ROI popup */
+.roi-popup{position:fixed;background:rgba(7,8,15,.98);border:1px solid var(--acc);padding:9px 13px;font-size:.58rem;pointer-events:none;display:none;z-index:500;min-width:170px;box-shadow:0 0 20px rgba(0,229,255,.15)}
+.roi-popup h4{color:var(--acc);letter-spacing:1.5px;text-transform:uppercase;font-size:.52rem;margin-bottom:7px}
+.roi-row{display:flex;justify-content:space-between;gap:12px;margin-bottom:3px}
+.roi-label{color:var(--mute)}
+.roi-val{color:var(--gold)}
+.roi-sep{border:none;border-top:1px solid var(--bord);margin:5px 0}
+/* ROI stat box */
+.roi-stat-box{margin-top:6px;padding:7px 8px;background:var(--surf2);border:1px solid rgba(57,255,151,.2)}
+.roi-stat-box .ml{color:var(--grn)}
+/* global tooltip */
+.mtip{position:fixed;background:rgba(7,8,15,.97);border:1px solid var(--acc);padding:4px 9px;font-size:.58rem;pointer-events:none;display:none;white-space:nowrap;z-index:1000}
+/* notification */
+.nf{position:fixed;bottom:12px;right:12px;background:var(--surf2);border:1px solid var(--bord);border-left:3px solid var(--acc);padding:7px 11px;font-size:.59rem;max-width:240px;z-index:2000;transform:translateX(130%);transition:transform .3s}
+.nf.show{transform:translateX(0)}.nf.err{border-left-color:var(--pink)}
+::-webkit-scrollbar{width:4px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--bord);border-radius:2px}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="logo"></div>
+  <div>
+    <h1>OCT <span>Skin</span> Analyzer · Universal</h1>
+    <div class="hdr-sub">SC · Dermis · Stiffness Workspace · 1018+87 calibrated</div>
+  </div>
+  <div class="hdr-badges">
+    <span class="badge b-a">Browser · No Upload</span>
+    <span class="badge b-g">SC ~10px</span>
+    <span class="badge b-p">Universal DP</span>
+  </div>
+</header>
+
+<div class="modebar">
+  <button class="modeBtn active" id="modeThick" onclick="setTopMode('thickness')">◈  Thickness</button>
+  <button class="modeBtn" id="modeStiff" onclick="setTopMode('stiffness')">⇕  Stiffness</button>
+  <span class="mode-info" id="modeInfo">SC / Dermis detection mode</span>
+</div>
+
+<div class="app-body">
+
+<!-- ════════ THICKNESS SIDEBAR ════════ -->
+<aside class="sb" id="sbThick">
+  <div class="sec">
+    <div class="sh">Image Input</div>
+    <div class="upz" id="upz"><input type="file" id="fi" accept="image/png,image/jpeg,image/bmp"><span class="upz-ico">⬆</span><p><strong>Drop OCT image here</strong><br>PNG / JPG / BMP</p></div>
+    <div class="prog"><div class="pf" id="pf"></div></div>
+  </div>
+  <div class="sec">
+    <div class="sh">SC Detection <span class="tag">~8-10px</span></div>
+    <div class="ctrl"><div class="cl">Artifact mask <span id="vArt">22</span></div><input type="range" id="art" min="5" max="60" value="22"></div>
+    <div class="ctrl"><div class="cl">Search depth <span id="vDep">280</span>px</div><input type="range" id="dep" min="30" max="500" value="280"></div>
+    <div class="ctrl"><div class="cl">Gauss sigma <span id="vSig">2.5</span></div><input type="range" id="sig" min="0.5" max="8" value="2.5" step="0.5"></div>
+    <div class="ctrl"><div class="cl">Peak threshold% <span id="vThr">28</span></div><input type="range" id="thr" min="10" max="65" value="28"></div>
+    <div class="ctrl"><div class="cl">SC smooth <span id="vSmo">61</span></div><input type="range" id="smo" min="11" max="201" step="2" value="61"></div>
+  </div>
+  <div class="sec">
+    <div class="sh">Dermis <span class="tag">D1≈35 D2≈105px</span></div>
+    <div class="ctrl"><div class="cl">Min offset <span id="vDmn">10</span>px</div><input type="range" id="dmn" min="5" max="60" value="10"></div>
+    <div class="ctrl"><div class="cl">Max offset <span id="vDmx">210</span>px</div><input type="range" id="dmx" min="30" max="350" value="210"></div>
+    <div class="ctrl"><div class="cl">Prior centre <span id="vDpc">75</span>px</div><input type="range" id="dpc" min="15" max="200" value="75"></div>
+    <div class="ctrl"><div class="cl">Prior sigma <span id="vDps">55</span>px</div><input type="range" id="dps" min="10" max="100" value="55"></div>
+    <div class="ctrl"><div class="cl">Signal sigma <span id="vDsg">7</span></div><input type="range" id="dsg" min="1" max="20" value="7" step="0.5"></div>
+    <div class="ctrl"><div class="cl">DP smooth <span id="vDsm">0.07</span></div><input type="range" id="dsm" min="0.01" max="0.5" value="0.07" step="0.01"></div>
+    <div class="ctrl"><div class="cl">Dermis smooth <span id="vDsw">91</span></div><input type="range" id="dsw" min="11" max="201" step="2" value="91"></div>
+  </div>
+  <div class="sec">
+    <button class="btn bp" id="abtn" disabled>▶  Analyze</button>
+    <button class="btn bs" id="rbtn" disabled>↺  Reset</button>
+  </div>
+  <div class="sec">
+    <div class="sh">Display</div>
+    <div class="toggle-row"><label class="tog"><input type="checkbox" id="shT" checked><span class="tk"></span></label><span class="tl">SC top</span></div>
+    <div class="toggle-row"><label class="tog"><input type="checkbox" id="shB" checked><span class="tk"></span></label><span class="tl">SC bottom</span></div>
+    <div class="toggle-row"><label class="tog"><input type="checkbox" id="shM" checked><span class="tk"></span></label><span class="tl">SC midline</span></div>
+    <div class="toggle-row"><label class="tog"><input type="checkbox" id="shSCF" checked><span class="tk"></span></label><span class="tl">SC fill</span></div>
+    <div class="toggle-row"><label class="tog"><input type="checkbox" id="shEF" checked><span class="tk"></span></label><span class="tl">Epi fill</span></div>
+    <div class="toggle-row"><label class="tog"><input type="checkbox" id="shD" checked><span class="tk"></span></label><span class="tl">Dermis midline</span></div>
+    <div class="toggle-row"><label class="tog"><input type="checkbox" id="shDF" checked><span class="tk"></span></label><span class="tl">Dermis band</span></div>
+    <div class="cr" style="margin-top:5px"><div class="cd" style="background:#ffd700"></div><span class="cn">SC top</span><input type="color" id="cScT" value="#ffd700"></div>
+    <div class="cr"><div class="cd" style="background:#ff9900"></div><span class="cn">SC bottom</span><input type="color" id="cScB" value="#ff9900"></div>
+    <div class="cr"><div class="cd" style="background:#39ff97"></div><span class="cn">Epi fill</span><input type="color" id="cEpi" value="#39ff97"></div>
+    <div class="cr"><div class="cd" style="background:#00e5ff"></div><span class="cn">Dermis</span><input type="color" id="cDerm" value="#00e5ff"></div>
+    <div class="ctrl" style="margin-top:5px"><div class="cl">Line width <span id="vLw">2</span>px</div><input type="range" id="lw" min="1" max="5" value="2"></div>
+  </div>
+  <div class="sec">
+    <div class="sh">Metrics</div>
+    <div class="mg">
+      <div class="mc gold-b"><div class="ml">SC Thick</div><div class="mv" id="mST">—</div></div>
+      <div class="mc"><div class="ml">SC Top Row</div><div class="mv" id="mSR">—</div></div>
+      <div class="mc acc-b"><div class="ml">Epi Gap</div><div class="mv acc" id="mEG">—</div></div>
+      <div class="mc"><div class="ml">Measured</div><div class="mv" id="mMs">—</div></div>
+    </div>
+  </div>
+  <div class="sec">
+    <button class="btn bs" id="expbtn" disabled onclick="doExport()">↓  Export PNG</button>
+  </div>
+</aside>
+
+<!-- ════════ STIFFNESS SIDEBAR ════════ -->
+<aside class="sb" id="sbStiff" style="display:none">
+  <div class="sec">
+    <div class="sh">Image Inputs</div>
+    <div class="dual">
+      <div>
+        <div class="img-tag i1">Image 1</div>
+        <div class="upz" id="sup1"><input type="file" id="sf1" accept="image/png,image/jpeg,image/bmp"><span class="upz-ico">⬆</span><p style="font-size:.5rem"><strong>Drop</strong><br>PNG/JPG</p></div>
+        <div class="img-name" id="sn1">—</div>
+      </div>
+      <div>
+        <div class="img-tag i2">Image 2</div>
+        <div class="upz" id="sup2"><input type="file" id="sf2" accept="image/png,image/jpeg,image/bmp"><span class="upz-ico">⬆</span><p style="font-size:.5rem"><strong>Drop</strong><br>PNG/JPG</p></div>
+        <div class="img-name" id="sn2">—</div>
+      </div>
+    </div>
+    <div class="prog" style="margin-top:4px"><div class="pf" id="spf"></div></div>
+  </div>
+  <div class="sec">
+    <div class="sh">SC Parameters <span class="tag">both images</span></div>
+    <div class="ctrl"><div class="cl">Artifact mask <span id="svArt">22</span></div><input type="range" id="sart" min="5" max="60" value="22"></div>
+    <div class="ctrl"><div class="cl">Search depth <span id="svDep">280</span>px</div><input type="range" id="sdep" min="30" max="500" value="280"></div>
+    <div class="ctrl"><div class="cl">Gauss sigma <span id="svSig">2.5</span></div><input type="range" id="ssig" min="0.5" max="8" value="2.5" step="0.5"></div>
+    <div class="ctrl"><div class="cl">Peak threshold% <span id="svThr">28</span></div><input type="range" id="sthr" min="10" max="65" value="28"></div>
+    <div class="ctrl"><div class="cl">SC smooth <span id="svSmo">61</span></div><input type="range" id="ssmo" min="11" max="201" step="2" value="61"></div>
+  </div>
+  <div class="sec">
+    <div class="sh">Overlay Options</div>
+    <div class="ctrl"><div class="cl">Img1 opacity <span id="svOp1">70</span>%</div><input type="range" id="sop1" min="10" max="100" value="70"></div>
+    <div class="ctrl"><div class="cl">Img2 opacity <span id="svOp2">70</span>%</div><input type="range" id="sop2" min="10" max="100" value="70"></div>
+    <div class="ctrl"><div class="cl">Annot every N cols <span id="svDens">50</span></div><input type="range" id="sdens" min="10" max="300" value="50" step="5"></div>
+    <div class="ctrl"><div class="cl">SC line width <span id="svLw">2</span>px</div><input type="range" id="slw" min="1" max="5" value="2"></div>
+    <div class="toggle-row"><label class="tog"><input type="checkbox" id="shAnno" checked><span class="tk"></span></label><span class="tl">Distance labels</span></div>
+    <div class="toggle-row"><label class="tog"><input type="checkbox" id="shConn" checked><span class="tk"></span></label><span class="tl">Connector lines</span></div>
+    <div class="toggle-row"><label class="tog"><input type="checkbox" id="shFill1" checked><span class="tk"></span></label><span class="tl">Img1 SC fill</span></div>
+    <div class="toggle-row"><label class="tog"><input type="checkbox" id="shFill2" checked><span class="tk"></span></label><span class="tl">Img2 SC fill</span></div>
+    <div class="toggle-row"><label class="tog"><input type="checkbox" id="shTicks" checked><span class="tk"></span></label><span class="tl">Tick marks</span></div>
+  </div>
+  <div class="sec">
+    <div class="sh">Colors</div>
+    <div class="cr"><div class="cd" style="background:#ffd700"></div><span class="cn">Img 1 SC</span><input type="color" id="sc1col" value="#ffd700"></div>
+    <div class="cr"><div class="cd" style="background:#ff6b9d"></div><span class="cn">Img 2 SC</span><input type="color" id="sc2col" value="#ff6b9d"></div>
+    <div class="cr"><div class="cd" style="background:#00e5ff"></div><span class="cn">Δ positive</span><input type="color" id="sdcol" value="#00e5ff"></div>
+    <div class="cr"><div class="cd" style="background:#ff6b9d"></div><span class="cn">Δ negative</span><input type="color" id="sdneg" value="#ff4757"></div>
+    <div class="cr"><div class="cd" style="background:#39ff97"></div><span class="cn">ROI</span><input type="color" id="sroicol" value="#39ff97"></div>
+  </div>
+  <div class="sec">
+    <button class="btn bp" id="sabtn" disabled>▶  Compute SC Distance</button>
+    <button class="btn bs" id="srbtn" disabled>↺  Reset</button>
+    <button class="btn bs" id="sexpbtn" disabled onclick="doStiffExport()">↓  Export View</button>
+  </div>
+  <div class="sec">
+    <div class="sh">Global Metrics</div>
+    <div class="mg">
+      <div class="mc gold-b"><div class="ml">Img1 SC mean row</div><div class="mv" id="sm1">—</div><div style="font-size:.44rem;color:var(--mute)" id="sm1mm"></div></div>
+      <div class="mc pink-b"><div class="ml">Img2 SC mean row</div><div class="mv pink" id="sm2">—</div><div style="font-size:.44rem;color:var(--mute)" id="sm2mm"></div></div>
+      <div class="mc acc-b"><div class="ml">Mean |Δ|</div><div class="mv acc" id="smD">—</div><div style="font-size:.44rem;color:var(--mute)" id="smDmm"></div></div>
+      <div class="mc grn-b"><div class="ml">Max |Δ|</div><div class="mv grn" id="smMax">—</div><div style="font-size:.44rem;color:var(--mute)" id="smMaxmm"></div></div>
+      <div class="mc"><div class="ml">Min Δ</div><div class="mv" id="smMin">—</div><div style="font-size:.44rem;color:var(--mute)" id="smMinmm"></div></div>
+      <div class="mc"><div class="ml">Columns</div><div class="mv" id="smCols">—</div></div>
+    </div>
+    <div class="roi-stat-box">
+      <div class="ml">ROI Mean |Δ|</div>
+      <div class="mv grn" id="smROI" style="font-size:1rem">—</div>
+      <div style="font-size:.46rem;color:var(--grn);margin-top:1px" id="smROImm"></div>
+      <div style="font-size:.46rem;color:var(--mute);margin-top:2px" id="smROIInfo">Draw rectangle to measure ROI</div>
+    </div>
+  </div>
+  <div class="sec">
+    <div class="sh">Legend</div>
+    <div style="font-size:.53rem;color:var(--mute);line-height:1.9">
+      <div><span style="color:var(--gold)">━━</span> Image 1 SC midline</div>
+      <div><span style="color:var(--pink)">━━</span> Image 2 SC midline</div>
+      <div><span style="color:var(--acc)">╏</span> Δ+ (Img2 deeper)</div>
+      <div><span style="color:#ff4757">╏</span> Δ− (Img2 shallower)</div>
+      <div><span style="color:var(--grn)">▭</span> ROI rectangle</div>
+    </div>
+  </div>
+</aside>
+
+<!-- ════════ THICKNESS CONTENT ════════ -->
+<div class="content" id="contentThick">
+  <div class="statusbar">
+    <div class="sdot" id="sd"></div>
+    <span id="st">Ready — drop an OCT image</span>
+    <div class="sep"></div><span id="sco">x: —  y: —</span>
+    <div class="sep"></div><span id="ssz">—</span>
+  </div>
+  <div class="tool-bar">
+    <span class="tool-label">Tool:</span>
+    <button class="tool-btn on" id="tv" onclick="setMode('view')">View</button>
+    <button class="tool-btn" id="tm" onclick="setMode('measure')">📏 Measure</button>
+    <div class="tool-sep"></div>
+    <button class="tool-btn" id="clr" onclick="clearM()" disabled>✕ Clear</button>
+  </div>
+  <div class="cw" id="cw">
+    <canvas id="C"></canvas>
+    <div class="emp" id="emp"><div class="emp-ico">◈</div><p>Drop your OCT image here<br>Universal · any OCT dataset</p></div>
+  </div>
+</div>
+
+<!-- ════════ STIFFNESS CONTENT ════════ -->
+<div class="content" id="contentStiff" style="display:none">
+  <div class="statusbar">
+    <div class="sdot" id="ssd"></div>
+    <span id="sst">Load 2 images → Compute SC Distance</span>
+    <div class="sep"></div><span id="ssz2">—</span>
+    <div class="sep"></div><span id="scoord">x: —  y: —</span>
+  </div>
+
+  <div class="view-tabs">
+    <button class="view-tab on" id="vtSuper" onclick="setStiffView('superimpose')">⊕ Superimpose</button>
+    <button class="view-tab" id="vtImg1" onclick="setStiffView('img1')">① Img1 Annotated</button>
+    <button class="view-tab" id="vtImg2" onclick="setStiffView('img2')">② Img2 Annotated</button>
+    <button class="view-tab" id="vtChart" onclick="setStiffView('chart')">▦ SC Profile Chart</button>
+  </div>
+
+  <div class="tool-bar">
+    <span class="tool-label">Tool:</span>
+    <button class="tool-btn on" id="stView" onclick="setStiffTool('view')">View</button>
+    <button class="tool-btn" id="stROI" onclick="setStiffTool('roi')">⬚ ROI Select</button>
+    <div class="tool-sep"></div>
+    <button class="tool-btn" id="stClearROI" onclick="clearROI()" disabled>✕ ROI</button>
+    <div class="tool-sep"></div>
+    <div class="tool-range-wrap">
+      <span>Every N:</span>
+      <input type="range" id="sdens2" min="10" max="300" value="50" step="5"
+        oninput="syncDens(this.value)">
+      <span id="sdens2val">50</span>
+    </div>
+  </div>
+
+  <!-- Superimpose -->
+  <div class="cw" id="vwSuper" style="position:relative">
+    <canvas id="superC"></canvas>
+    <div class="emp" id="empSuper"><div class="emp-ico">⊕</div><p>Compute SC Distance to see superimposed view</p></div>
+  </div>
+
+  <!-- Img1 annotated -->
+  <div class="cw" id="vwImg1" style="display:none">
+    <canvas id="img1C"></canvas>
+    <div class="emp" id="empImg1"><div class="emp-ico">①</div><p>Image 1 with SC annotations</p></div>
+  </div>
+
+  <!-- Img2 annotated -->
+  <div class="cw" id="vwImg2" style="display:none">
+    <canvas id="img2C"></canvas>
+    <div class="emp" id="empImg2"><div class="emp-ico">②</div><p>Image 2 with SC annotations</p></div>
+  </div>
+
+  <!-- Chart view -->
+  <div class="chart-wrap" id="vwChart" style="display:none">
+    <div class="chart-hdr">
+      <h3>SC Profile &amp; Distance Chart</h3>
+      <div class="chart-legend">
+        <div class="cl-item"><div class="cl-dot" style="background:#ffd700"></div>Img1 SC row</div>
+        <div class="cl-item"><div class="cl-dot" style="background:#ff6b9d"></div>Img2 SC row</div>
+        <div class="cl-item"><div class="cl-dot" style="background:#00e5ff"></div>Δ signed</div>
+        <div class="cl-item"><div class="cl-dot" style="background:#39ff97"></div>|Δ|</div>
+        <div class="cl-item"><div class="cl-dot" style="background:rgba(57,255,151,.25)"></div>ROI zone</div>
+      </div>
+    </div>
+    <canvas id="annotChart"></canvas>
+  </div>
+
+  <!-- ROI popup -->
+  <div class="roi-popup" id="roiPopup">
+    <h4>ROI Statistics</h4>
+    <div class="roi-row"><span class="roi-label">Mean |Δ|</span><span class="roi-val" id="rMeanAbs">—</span></div>
+    <div class="roi-row" style="margin-top:-1px"><span class="roi-label"></span><span style="font-size:.44rem;color:var(--mute)" id="rMeanAbsmm"></span></div>
+    <div class="roi-row"><span class="roi-label">Mean Δ</span><span class="roi-val" id="rMean">—</span></div>
+    <div class="roi-row" style="margin-top:-1px"><span class="roi-label"></span><span style="font-size:.44rem;color:var(--mute)" id="rMeanmm"></span></div>
+    <div class="roi-row"><span class="roi-label">Max |Δ|</span><span class="roi-val" id="rMax">—</span></div>
+    <div class="roi-row" style="margin-top:-1px"><span class="roi-label"></span><span style="font-size:.44rem;color:var(--mute)" id="rMaxmm"></span></div>
+    <div class="roi-row"><span class="roi-label">Min Δ</span><span class="roi-val" id="rMin">—</span></div>
+    <div class="roi-row" style="margin-top:-1px"><span class="roi-label"></span><span style="font-size:.44rem;color:var(--mute)" id="rMinmm"></span></div>
+    <hr class="roi-sep">
+    <div class="roi-row"><span class="roi-label">Columns</span><span class="roi-val" id="rCols">—</span></div>
+    <div class="roi-row"><span class="roi-label">Img1 SC mean</span><span class="roi-val" id="rSC1">—</span></div>
+    <div class="roi-row"><span class="roi-label">Img2 SC mean</span><span class="roi-val" id="rSC2">—</span></div>
+  </div>
+</div>
+
+</div><!-- app-body -->
+
+<div class="mtip" id="tip"></div>
+<div class="nf" id="nf"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script>
+// ════════════════════════════════════════════════════════════
+//  OCT UNIVERSAL ANALYZER v3
+// ════════════════════════════════════════════════════════════
+const DERM_HALF=5;
+let orig=null,bounds=null,curMode='view',mpts=[],mlines=[];
+const CV=g('C'),cx=CV.getContext('2d');
+let sOrig1=null,sOrig2=null,sBounds1=null,sBounds2=null;
+let stiffDiffs=null,stiffDone=false;
+let stiffView='superimpose',stiffTool='view';
+let roi=null,roiDragging=false,_roiStart=null;
+let chartInst=null;
+
+function g(id){return document.getElementById(id)}
+function notify(msg,err=false){const n=g('nf');n.textContent=msg;n.className='nf show'+(err?' err':'');clearTimeout(n._t);n._t=setTimeout(()=>n.className='nf',3200);}
+function setStP(pct,msg){g('spf').style.width=pct+'%';g('sst').textContent=msg;if(pct===100)setTimeout(()=>{g('spf').style.width='0%'},900)}
+function setP(pct,msg){g('pf').style.width=pct+'%';g('st').textContent=msg;if(pct===100)setTimeout(()=>{g('pf').style.width='0%'},900)}
+function setSt(t,ok=false){g('st').textContent=t;g('sd').style.background=ok?'var(--grn)':'var(--mute)'}
+function hex2rgb(h){return[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)]}
+function h2a(h,a){const[r,gr,b]=hex2rgb(h);return`rgba(${r},${gr},${b},${a})`}
+function syncDens(v){g('sdens').value=v;g('svDens').textContent=v;g('sdens2val').textContent=v;if(stiffDone)redrawStiff();}
+const PX_PER_MM=200;
+function px2mm(px){return px/PX_PER_MM;}
+function fmm(px){return px2mm(px).toFixed(4)+'mm';}
+function setMetricPxMm(idPx,idMm,val,signed=false){const prefix=signed&&val>0?'+':'';g(idPx).innerHTML=`${prefix}${val.toFixed(2)}<span class="mu">px</span>`;g(idMm).textContent=`${prefix}${fmm(val)}`;}
+function setMetricAbsPxMm(idPx,idMm,val){g(idPx).innerHTML=`${val.toFixed(2)}<span class="mu">px</span>`;g(idMm).textContent=fmm(val);}
+
+// ── Math ──────────────────────────────────────────────────────
+function gauss1D(a,s){const r=Math.max(1,Math.ceil(s*3)),n=a.length,k=[];let sm=0;for(let i=-r;i<=r;i++){const v=Math.exp(-i*i/(2*s*s));k.push(v);sm+=v;}const kn=k.map(v=>v/sm),o=new Float32Array(n);for(let i=0;i<n;i++){let acc=0;for(let j=0;j<kn.length;j++)acc+=a[Math.min(n-1,Math.max(0,i+j-r))]*kn[j];o[i]=acc;}return o;}
+function med1D(a,w){const h=Math.floor(w/2),o=new Float32Array(a.length);for(let i=0;i<a.length;i++){const sl=Array.from(a.slice(Math.max(0,i-h),Math.min(a.length,i+h+1))).sort((x,y)=>x-y);o[i]=sl[Math.floor(sl.length/2)];}return o;}
+function savgol(a,w,p=3){w=Math.min(w,a.length);if(w%2===0)w--;if(w<p+2)return Float32Array.from(a);const h=Math.floor(w/2),o=new Float32Array(a.length);for(let i=0;i<a.length;i++){const lo=Math.max(0,i-h),hi=Math.min(a.length-1,i+h);let n=0,d=0;for(let j=lo;j<=hi;j++){const ww=1-Math.abs(j-i)/(h+1);n+=a[j]*ww;d+=ww;}o[i]=n/d;}return o;}
+function smoothBnd(a,w){const ww=(w%2===0?w+1:w);let y=med1D(a,Math.max(3,Math.min(19,Math.floor(ww/5)|1)));y=savgol(y,ww,3);y=gauss1D(y,Math.max(0.5,ww/18));return y;}
+function dpCont(raw,maxJ){const W=raw.length,r=new Float32Array(W);r[0]=raw[0];for(let c=1;c<W;c++)r[c]=Math.max(r[c-1]-maxJ,Math.min(r[c-1]+maxJ,raw[c]));for(let c=W-2;c>=0;c--)r[c]=Math.max(r[c+1]-maxJ,Math.min(r[c+1]+maxJ,r[c]));return r;}
+function gv(d,W,r,c){const i=(r*W+c)*4;return .299*d[i]+.587*d[i+1]+.114*d[i+2]}
+function rowMean(d,W,r){let s=0;for(let c=0;c<W;c++)s+=gv(d,W,r,c);return s/W}
+function rowStd(d,W,r){let s=0,s2=0;for(let c=0;c<W;c++){const v=gv(d,W,r,c);s+=v;s2+=v*v;}const m=s/W;return Math.sqrt(Math.max(0,s2/W-m*m))}
+function colSlice(d,W,r0,r1,c){const a=new Float32Array(r1-r0);for(let r=r0;r<r1;r++)a[r-r0]=gv(d,W,r,c);return a}
+
+// ── Detection ─────────────────────────────────────────────────
+function findArtifact(d,W,H,maxR){let bestSc=0,artRow=0;for(let r=0;r<Math.min(maxR,H);r++){const m=rowMean(d,W,r),s=rowStd(d,W,r),sc=m/(s+.01);if(sc>bestSc&&m>30){bestSc=sc;artRow=r;}}if(rowMean(d,W,artRow)<30)return{top:0,bot:14};const thr=rowMean(d,W,artRow)*.55;let top=artRow,bot=artRow;for(let r=artRow;r>=0;r--)if(rowMean(d,W,r)<thr){top=r;break;}for(let r=artRow;r<Math.min(maxR,H);r++)if(rowMean(d,W,r)<thr){bot=r;break;}return{top,bot:Math.min(bot+8,maxR)};}
+function detectSC(d,W,H,artBot,depth,sigma,thrPct){const s0=Math.max(artBot+2,2),s1=Math.min(s0+depth,Math.floor(H*.72)),len=s1-s0,tf=thrPct/100;const scTop=new Float32Array(W),scBot=new Float32Array(W),scPk=new Float32Array(W);for(let c=0;c<W;c++){const col=colSlice(d,W,s0,s1,c),sm=gauss1D(col,sigma);let pk=0,pkV=0;for(let i=0;i<len;i++)if(sm[i]>pkV){pkV=sm[i];pk=i;}scPk[c]=s0+pk;if(pkV<10){scTop[c]=s0+Math.max(0,pk-5);scBot[c]=s0+Math.min(len-1,pk+5);continue;}const cut=pkV*tf;let top=pk,bot=pk;for(let i=pk;i>=0;i--){if(sm[i]<cut){top=i+1;break;}if(i===0)top=0;}for(let i=pk;i<len;i++){if(sm[i]<cut){bot=i-1;break;}if(i===len-1)bot=len-1;}if(bot-top>14){top=Math.max(0,pk-6);bot=Math.min(len-1,pk+6);}if(bot-top<2){top=Math.max(0,pk-2);bot=Math.min(len-1,pk+2);}scTop[c]=s0+top;scBot[c]=s0+bot;}return{scTop,scBot,scPk};}
+function detectDermis(d,W,H,scBotArr,dMin,dMax,priorCentre,priorSigma,sigmaD,dpSmooth){const nOff=dMax-dMin,prior=new Float32Array(nOff);for(let i=0;i<nOff;i++){const off=dMin+i,d2=(off-priorCentre)*(off-priorCentre);prior[i]=Math.exp(-d2/(2*priorSigma*priorSigma));}const cost=new Float32Array(nOff*W),scBotInt=new Int32Array(W);for(let c=0;c<W;c++)scBotInt[c]=Math.round(scBotArr[c]);const sigmas=[sigmaD*.55,sigmaD,sigmaD*1.75];for(let c=0;c<W;c++){const base=scBotInt[c],rs=Math.max(0,base+dMin),re=Math.min(H-4,base+dMax),len=re-rs;if(len<4){for(let i=0;i<nOff;i++)cost[i*W+c]=1;continue;}const colRaw=colSlice(d,W,rs,re,c),msScore=new Float32Array(len);for(const sg of sigmas){const sm=gauss1D(colRaw,Math.max(0.5,sg));let mn=Infinity,mx=-Infinity;for(let i=0;i<len;i++){if(sm[i]<mn)mn=sm[i];if(sm[i]>mx)mx=sm[i];}const rng=Math.max(mx-mn,1);for(let i=0;i<len;i++)msScore[i]+=(sm[i]-mn)/rng;}let msMax=0;for(let i=0;i<len;i++)if(msScore[i]>msMax)msMax=msScore[i];msMax=Math.max(msMax,.01);for(let i=0;i<len;i++)msScore[i]/=msMax;const sm8=gauss1D(colRaw,Math.max(1,sigmaD)),grad=new Float32Array(len);for(let i=1;i<len-1;i++)grad[i]=(sm8[i+1]-sm8[i-1])/2;grad[0]=grad[1];grad[len-1]=grad[len-2];let dscMax=0;for(let i=0;i<len;i++){const v=Math.max(0,-grad[i]);if(v>dscMax)dscMax=v;}dscMax=Math.max(dscMax,.01);for(let i=0;i<nOff;i++){const li=Math.min(Math.max(0,i-Math.max(0,rs-(base+dMin))),len-1);cost[i*W+c]=1-(0.45*msScore[li]+0.35*prior[i]+0.20*Math.max(0,-grad[li])/dscMax);}}const dp=new Float32Array(nOff*W).fill(1e9),par=new Int32Array(nOff*W);for(let i=0;i<nOff;i++)dp[i*W+0]=cost[i*W+0];for(let c=1;c<W;c++){for(let i=0;i<nOff;i++){let best=1e9,bj=i;const lo=Math.max(0,i-7),hi=Math.min(nOff-1,i+7);for(let j=lo;j<=hi;j++){const t=dp[j*W+(c-1)]+dpSmooth*Math.abs(j-i);if(t<best){best=t;bj=j;}}dp[i*W+c]=best+cost[i*W+c];par[i*W+c]=bj;}}const offs=new Int32Array(W);let bst=1e9;for(let i=0;i<nOff;i++)if(dp[i*W+(W-1)]<bst){bst=dp[i*W+(W-1)];offs[W-1]=i;}for(let c=W-2;c>=0;c--)offs[c]=par[offs[c+1]*W+(c+1)];const dermMid=new Float32Array(W);for(let c=0;c<W;c++)dermMid[c]=Math.min(H-1,scBotInt[c]+dMin+offs[c]);return dermMid;}
+
+function getP(){return{art:+g('art').value,dep:+g('dep').value,sig:+g('sig').value,thr:+g('thr').value,smo:+g('smo').value,dmn:+g('dmn').value,dmx:+g('dmx').value,dpc:+g('dpc').value,dps:+g('dps').value,dsg:+g('dsg').value,dsm:+g('dsm').value,dsw:+g('dsw').value};}
+function getSP(){return{art:+g('sart').value,dep:+g('sdep').value,sig:+g('ssig').value,thr:+g('sthr').value,smo:+g('ssmo').value};}
+
+function run(imgData,p){
+  const{width:W,height:H,data:d}=imgData;
+  setP(7,'Artifact…');const art=findArtifact(d,W,H,Math.max(p.art,20));
+  setP(18,'SC peaks…');const{scTop:scTR,scBot:scBR,scPk:scPkR}=detectSC(d,W,H,art.bot,p.dep,p.sig,p.thr);
+  setP(36,'Smooth SC…');const wsc=(p.smo%2===0?p.smo+1:p.smo);
+  const scTs=smoothBnd(dpCont(scTR,8),wsc),scBs=smoothBnd(dpCont(scBR,8),wsc),scMs=smoothBnd(dpCont(scPkR,8),wsc);
+  const minR=art.bot+2,maxR=Math.floor(H*.74);
+  for(let c=0;c<W;c++){scTs[c]=Math.max(minR,Math.min(maxR,scTs[c]));scBs[c]=Math.max(scTs[c]+2,Math.min(maxR,scBs[c]));scMs[c]=Math.max(scTs[c],Math.min(scBs[c],scMs[c]));if(scBs[c]-scTs[c]>14)scBs[c]=scTs[c]+14;}
+  setP(54,'Dermis DP…');const dermRaw=detectDermis(d,W,H,scBs,p.dmn,p.dmx,p.dpc,p.dps,p.dsg,p.dsm);
+  setP(80,'Dermis smooth…');const wdm=(p.dsw%2===0?p.dsw+1:p.dsw);
+  const dermS=smoothBnd(dermRaw,wdm);for(let c=0;c<W;c++)dermS[c]=Math.max(scBs[c]+p.dmn,Math.min(H-1,dermS[c]));
+  const dermTop=new Float32Array(W),dermBot=new Float32Array(W);
+  for(let c=0;c<W;c++){dermTop[c]=Math.max(0,dermS[c]-DERM_HALF);dermBot[c]=Math.min(H-1,dermS[c]+DERM_HALF);}
+  let stSum=0,egSum=0;for(let c=0;c<W;c++){stSum+=scBs[c]-scTs[c];egSum+=dermTop[c]-scBs[c];}
+  setP(100,'Done');
+  return{scTop:scTs,scBot:scBs,scMid:scMs,dermMid:dermS,dermTop,dermBot,W,H,scThick:stSum/W,epiGap:egSum/W,scTopMean:Array.from(scTs).reduce((a,b)=>a+b,0)/W};
+}
+
+function runSCOnly(imgData,p){
+  const{width:W,height:H,data:d}=imgData;
+  const art=findArtifact(d,W,H,Math.max(p.art,20));
+  const{scTop:scTR,scBot:scBR,scPk:scPkR}=detectSC(d,W,H,art.bot,p.dep,p.sig,p.thr);
+  const wsc=(p.smo%2===0?p.smo+1:p.smo);
+  const scTs=smoothBnd(dpCont(scTR,8),wsc),scBs=smoothBnd(dpCont(scBR,8),wsc),scMs=smoothBnd(dpCont(scPkR,8),wsc);
+  const minR=art.bot+2,maxR=Math.floor(H*.74);
+  for(let c=0;c<W;c++){scTs[c]=Math.max(minR,Math.min(maxR,scTs[c]));scBs[c]=Math.max(scTs[c]+2,Math.min(maxR,scBs[c]));scMs[c]=Math.max(scTs[c],Math.min(scBs[c],scMs[c]));if(scBs[c]-scTs[c]>14)scBs[c]=scTs[c]+14;}
+  return{scTop:scTs,scBot:scBs,scMid:scMs,W,H};
+}
+
+// ── Thickness render ──────────────────────────────────────────
+function render(b){
+  if(!orig)return;cx.putImageData(orig,0,0);
+  const{scTop,scBot,scMid,dermMid,dermTop,dermBot,W}=b;
+  const lw=parseFloat(g('lw').value);
+  const cScT=g('cScT').value,cScB=g('cScB').value,cEpi=g('cEpi').value,cDrm=g('cDerm').value;
+  const line=(arr,col,w,dash=[])=>{cx.beginPath();cx.moveTo(0,arr[0]);for(let c=1;c<W;c++)cx.lineTo(c,arr[c]);cx.strokeStyle=col;cx.lineWidth=w;cx.lineJoin='round';cx.setLineDash(dash);cx.stroke();cx.setLineDash([]);};
+  const fill2=(a1,a2,col)=>{cx.beginPath();cx.moveTo(0,a1[0]);for(let c=1;c<W;c++)cx.lineTo(c,a1[c]);for(let c=W-1;c>=0;c--)cx.lineTo(c,a2[c]);cx.closePath();cx.fillStyle=col;cx.fill();};
+  if(g('shEF').checked)fill2(scBot,dermTop,h2a(cEpi,.18));
+  if(g('shSCF').checked)fill2(scTop,scBot,h2a(cScT,.38));
+  if(g('shDF').checked)fill2(dermTop,dermBot,h2a(cDrm,.40));
+  if(g('shT').checked)line(scTop,cScT,lw+.5);
+  if(g('shB').checked)line(scBot,cScB,lw);
+  if(g('shM').checked)line(scMid,'#ffffff',Math.max(1,lw-.5),[4,3]);
+  if(g('shD').checked)line(dermMid,cDrm,lw+.5);
+  for(const m of mlines){cx.beginPath();cx.moveTo(m.x1,m.y1);cx.lineTo(m.x2,m.y2);cx.strokeStyle='#39ff97';cx.lineWidth=1.5;cx.setLineDash([4,3]);cx.stroke();cx.setLineDash([]);for(const[px,py]of[[m.x1,m.y1],[m.x2,m.y2]]){cx.beginPath();cx.arc(px,py,3,0,Math.PI*2);cx.fillStyle='#39ff97';cx.fill();}const tx=(m.x1+m.x2)/2+5,ty=(m.y1+m.y2)/2-3;cx.font='bold 10px JetBrains Mono,monospace';cx.strokeStyle='#07080f';cx.lineWidth=3;cx.strokeText(`${m.d.toFixed(1)}px`,tx,ty);cx.fillStyle='#39ff97';cx.fillText(`${m.d.toFixed(1)}px`,tx,ty);}
+  if(mpts.length===1){cx.beginPath();cx.arc(mpts[0].x,mpts[0].y,4,0,Math.PI*2);cx.fillStyle='#39ff97';cx.fill();}
+}
+
+// ════════════════════════════════════════════════════════════
+//  STIFFNESS DRAWING ENGINE
+// ════════════════════════════════════════════════════════════
+
+function drawSCLine(ctx,bounds,color,lw,showFill,fillAlpha=0.28){
+  const{scTop,scBot,scMid,W}=bounds;
+  if(showFill){ctx.beginPath();ctx.moveTo(0,scTop[0]);for(let c=1;c<W;c++)ctx.lineTo(c,scTop[c]);for(let c=W-1;c>=0;c--)ctx.lineTo(c,scBot[c]);ctx.closePath();ctx.fillStyle=h2a(color,fillAlpha);ctx.fill();}
+  ctx.beginPath();ctx.moveTo(0,scMid[0]);for(let c=1;c<W;c++)ctx.lineTo(c,scMid[c]);
+  ctx.strokeStyle=color;ctx.lineWidth=lw;ctx.lineJoin='round';ctx.setLineDash([5,3]);ctx.stroke();ctx.setLineDash([]);
+}
+
+function drawAnnot(ctx,b1,b2,diffs,W,step,onlyInROI=false){
+  const lw=parseFloat(g('slw').value);
+  const c1col=g('sc1col').value,c2col=g('sc2col').value;
+  const dcPos=g('sdcol').value,dcNeg=g('sdneg').value;
+  const showAnno=g('shAnno').checked,showConn=g('shConn').checked,showTick=g('shTicks').checked;
+  ctx.font='bold 9px JetBrains Mono,monospace';
+  for(let c=Math.floor(step/2);c<W;c+=step){
+    if(onlyInROI&&roi&&(c<roi.x||c>roi.x+roi.w))continue;
+    const y1=b1.scMid[c],y2=b2.scMid[c],diff=diffs[c];
+    const inROI=roi&&c>=roi.x&&c<=roi.x+roi.w;
+    const col=diff>=0?dcPos:dcNeg;
+    if(showConn){ctx.beginPath();ctx.moveTo(c,y1);ctx.lineTo(c,y2);ctx.strokeStyle=h2a(col,.5);ctx.lineWidth=1;ctx.setLineDash([2,2]);ctx.stroke();ctx.setLineDash([]);}
+    if(showTick){ctx.strokeStyle=c1col;ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(c-3,y1);ctx.lineTo(c+3,y1);ctx.stroke();ctx.strokeStyle=c2col;ctx.beginPath();ctx.moveTo(c-3,y2);ctx.lineTo(c+3,y2);ctx.stroke();}
+    if(showAnno&&Math.abs(diff)>.3){const label=`${diff>=0?'+':''}${diff.toFixed(1)}px/${diff>=0?'+':''}${fmm(diff)}`;const tx=c+4,ty=(y1+y2)/2+3;ctx.strokeStyle='rgba(7,8,15,.9)';ctx.lineWidth=3;ctx.strokeText(label,tx,ty);ctx.fillStyle=inROI?g('sroicol').value:col;ctx.fillText(label,tx,ty);}
+  }
+}
+
+function drawROIRect(ctx,roiR,diffs,W){
+  if(!roiR)return;
+  const{x,y,w,h}=roiR,rcol=g('sroicol').value;
+  ctx.strokeStyle=rcol;ctx.lineWidth=1.5;ctx.setLineDash([4,3]);ctx.strokeRect(x,y,w,h);ctx.setLineDash([]);
+  ctx.fillStyle=h2a(rcol,.07);ctx.fillRect(x,y,w,h);
+  // Stats label
+  if(diffs&&stiffDone){
+    const x0=Math.max(0,Math.round(x)),x1=Math.min(W-1,Math.round(x+w));
+    let s=0,cnt=0;for(let c=x0;c<=x1;c++){s+=Math.abs(diffs[c]);cnt++;}
+    if(cnt>0){const meanR=s/cnt;const label=`|Δ|=${meanR.toFixed(2)}px / ${fmm(meanR)}`;ctx.font='bold 10px JetBrains Mono,monospace';ctx.strokeStyle='rgba(7,8,15,.9)';ctx.lineWidth=3;ctx.strokeText(label,x+3,y>16?y-4:y+h+12);ctx.fillStyle=rcol;ctx.fillText(label,x+3,y>16?y-4:y+h+12);}
+  }
+}
+
+// ── Superimpose view ─────────────────────────────────────────
+function drawSuperimpose(){
+  if(!stiffDone)return;
+  const cvs=g('superC'),ctx=cvs.getContext('2d');
+  const W=Math.min(sBounds1.W,sBounds2.W),H=Math.min(sOrig1.height,sOrig2.height);
+  cvs.width=W;cvs.height=H;
+  // Compose images
+  ctx.globalAlpha=parseFloat(g('sop1').value)/100;ctx.putImageData(sOrig1,0,0);
+  const tmp=document.createElement('canvas');tmp.width=W;tmp.height=H;tmp.getContext('2d').putImageData(sOrig2,0,0);
+  ctx.globalAlpha=parseFloat(g('sop2').value)/100;ctx.drawImage(tmp,0,0);ctx.globalAlpha=1;
+  const lw=parseFloat(g('slw').value);
+  drawSCLine(ctx,sBounds1,g('sc1col').value,lw,g('shFill1').checked);
+  drawSCLine(ctx,sBounds2,g('sc2col').value,lw,g('shFill2').checked);
+  drawAnnot(ctx,sBounds1,sBounds2,stiffDiffs,W,parseInt(g('sdens').value));
+  drawROIRect(ctx,roi,stiffDiffs,W);
+  g('empSuper').style.display='none';
+}
+
+// ── Image 1 annotated (with own image, SC1 line, delta labels at SC1 positions) ──
+function drawImg1Annotated(){
+  if(!stiffDone)return;
+  const cvs=g('img1C'),ctx=cvs.getContext('2d');
+  const W=sBounds1.W,H=sOrig1.height;
+  cvs.width=W;cvs.height=H;
+  ctx.putImageData(sOrig1,0,0);
+  const lw=parseFloat(g('slw').value);
+  drawSCLine(ctx,sBounds1,g('sc1col').value,lw,g('shFill1').checked);
+  const step=parseInt(g('sdens').value);
+  const dcPos=g('sdcol').value,dcNeg=g('sdneg').value;
+  const roiC=g('sroicol').value;
+  ctx.font='bold 9px JetBrains Mono,monospace';
+  if(g('shTicks').checked){for(let c=0;c<W;c+=step){const y=sBounds1.scMid[c];ctx.strokeStyle=g('sc1col').value;ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(c-4,y);ctx.lineTo(c+4,y);ctx.stroke();}}
+  if(g('shAnno').checked){for(let c=Math.floor(step/2);c<W;c+=step){const d=stiffDiffs[c];if(Math.abs(d)<.3)continue;const y=sBounds1.scMid[c];const inROI=roi&&c>=roi.x&&c<=roi.x+roi.w;const col=d>=0?dcPos:dcNeg;const label=`${d>=0?'+':''}${d.toFixed(1)}px/${d>=0?'+':''}${fmm(d)}`;ctx.strokeStyle='rgba(7,8,15,.9)';ctx.lineWidth=3;ctx.strokeText(label,c+4,y-5);ctx.fillStyle=inROI?roiC:col;ctx.fillText(label,c+4,y-5);}}
+  drawROIRect(ctx,roi,stiffDiffs,W);
+  g('empImg1').style.display='none';
+}
+
+// ── Image 2 annotated ────────────────────────────────────────
+function drawImg2Annotated(){
+  if(!stiffDone)return;
+  const cvs=g('img2C'),ctx=cvs.getContext('2d');
+  const W=sBounds2.W,H=sOrig2.height;
+  cvs.width=W;cvs.height=H;
+  ctx.putImageData(sOrig2,0,0);
+  const lw=parseFloat(g('slw').value);
+  drawSCLine(ctx,sBounds2,g('sc2col').value,lw,g('shFill2').checked);
+  const step=parseInt(g('sdens').value);
+  const dcPos=g('sdcol').value,dcNeg=g('sdneg').value,roiC=g('sroicol').value;
+  ctx.font='bold 9px JetBrains Mono,monospace';
+  if(g('shTicks').checked){for(let c=0;c<W;c+=step){const y=sBounds2.scMid[c];ctx.strokeStyle=g('sc2col').value;ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(c-4,y);ctx.lineTo(c+4,y);ctx.stroke();}}
+  if(g('shAnno').checked){for(let c=Math.floor(step/2);c<W;c+=step){const d=stiffDiffs[c];if(Math.abs(d)<.3)continue;const y=sBounds2.scMid[c];const inROI=roi&&c>=roi.x&&c<=roi.x+roi.w;const col=d>=0?dcPos:dcNeg;const label=`${d>=0?'+':''}${d.toFixed(1)}px/${d>=0?'+':''}${fmm(d)}`;ctx.strokeStyle='rgba(7,8,15,.9)';ctx.lineWidth=3;ctx.strokeText(label,c+4,y+12);ctx.fillStyle=inROI?roiC:col;ctx.fillText(label,c+4,y+12);}}
+  drawROIRect(ctx,roi,stiffDiffs,W);
+  g('empImg2').style.display='none';
+}
+
+// ── Annotation-only chart ─────────────────────────────────────
+function drawAnnotChart(){
+  if(!stiffDone)return;
+  const W=stiffDiffs.length;
+  const step=Math.max(1,Math.ceil(W/700));
+  const labels=[],d1=[],d2=[],dd=[],dabs=[];
+  for(let c=0;c<W;c+=step){labels.push(c);d1.push(+sBounds1.scMid[c].toFixed(2));d2.push(+sBounds2.scMid[c].toFixed(2));dd.push(+stiffDiffs[c].toFixed(2));dabs.push(+Math.abs(stiffDiffs[c]).toFixed(2));}
+
+  const annots={};
+  if(roi){const x0=Math.max(0,Math.round(roi.x/step)),x1=Math.min(labels.length-1,Math.round((roi.x+roi.w)/step));annots.roiBox={type:'box',xMin:x0,xMax:x1,xScaleID:'x',backgroundColor:'rgba(57,255,151,.09)',borderColor:'rgba(57,255,151,.4)',borderWidth:1,label:{display:true,content:'ROI',font:{size:10,family:'JetBrains Mono'},color:'#39ff97',position:'start'}};}
+
+  if(chartInst){chartInst.destroy();chartInst=null;}
+  chartInst=new Chart(g('annotChart').getContext('2d'),{
+    type:'line',
+    data:{labels,datasets:[
+      {label:'Img1 SC row',data:d1,borderColor:'#ffd700',borderWidth:1.5,pointRadius:0,tension:0.2,yAxisID:'yRow'},
+      {label:'Img2 SC row',data:d2,borderColor:'#ff6b9d',borderWidth:1.5,pointRadius:0,tension:0.2,yAxisID:'yRow'},
+      {label:'Δ signed',data:dd,borderColor:'rgba(0,229,255,.8)',borderWidth:1.5,pointRadius:0,tension:0.2,fill:{target:'origin',above:'rgba(0,229,255,.12)',below:'rgba(255,71,87,.12)'},yAxisID:'yDiff'},
+      {label:'|Δ|',data:dabs,borderColor:'rgba(57,255,151,.85)',borderWidth:1,pointRadius:0,tension:0.2,borderDash:[4,2],yAxisID:'yDiff'}
+    ]},
+    options:{
+      animation:false,responsive:true,maintainAspectRatio:false,
+      interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{labels:{color:'#5a6080',font:{family:'JetBrains Mono',size:10},boxWidth:10,padding:10}},
+        tooltip:{backgroundColor:'rgba(7,8,15,.97)',titleColor:'#00e5ff',bodyColor:'#e8ecf4',borderColor:'#1e2235',borderWidth:1,bodyFont:{family:'JetBrains Mono',size:10}},
+        annotation:{annotations:annots}
+      },
+      scales:{
+        x:{ticks:{color:'#5a6080',font:{family:'JetBrains Mono',size:9},maxTicksLimit:16},grid:{color:'rgba(30,34,53,.7)'},title:{display:true,text:'Column (px)',color:'#5a6080',font:{family:'JetBrains Mono',size:9}}},
+        yRow:{position:'left',title:{display:true,text:'SC row (px)',color:'#5a6080',font:{family:'JetBrains Mono',size:9}},ticks:{color:'#5a6080',font:{family:'JetBrains Mono',size:9}},grid:{color:'rgba(30,34,53,.7)'}},
+        yDiff:{position:'right',title:{display:true,text:'Δ (px)',color:'#00e5ff',font:{family:'JetBrains Mono',size:9}},ticks:{color:'#00e5ff',font:{family:'JetBrains Mono',size:9}},grid:{drawOnChartArea:false}}
+      }
+    }
+  });
+}
+
+function redrawStiff(){
+  if(!stiffDone)return;
+  if(stiffView==='superimpose')drawSuperimpose();
+  else if(stiffView==='img1')drawImg1Annotated();
+  else if(stiffView==='img2')drawImg2Annotated();
+  else if(stiffView==='chart')drawAnnotChart();
+}
+
+// ── ROI ──────────────────────────────────────────────────────
+function computeROIStats(roiR){
+  if(!stiffDone||!stiffDiffs)return;
+  const W=stiffDiffs.length;
+  const x0=Math.max(0,Math.round(roiR.x)),x1=Math.min(W-1,Math.round(roiR.x+roiR.w));
+  if(x1<=x0)return;
+  let sAbs=0,s=0,maxAbs=-Infinity,minD=Infinity,s1=0,s2=0,cnt=0;
+  for(let c=x0;c<=x1;c++){const d=stiffDiffs[c],ad=Math.abs(d);sAbs+=ad;s+=d;if(ad>maxAbs)maxAbs=ad;if(d<minD)minD=d;s1+=sBounds1.scMid[c];s2+=sBounds2.scMid[c];cnt++;}
+  const meanAbsROI=sAbs/cnt,meanROI=s/cnt;
+  g('rMeanAbs').innerHTML=`${meanAbsROI.toFixed(2)}<span class="mu">px</span>`;g('rMeanAbsmm').textContent=fmm(meanAbsROI);
+  g('rMean').innerHTML=`${meanROI.toFixed(2)}<span class="mu">px</span>`;g('rMeanmm').textContent=fmm(meanROI);
+  g('rMax').innerHTML=`${maxAbs.toFixed(2)}<span class="mu">px</span>`;g('rMaxmm').textContent=fmm(maxAbs);
+  g('rMin').innerHTML=`${minD.toFixed(2)}<span class="mu">px</span>`;g('rMinmm').textContent=fmm(minD);
+  g('rCols').textContent=cnt;
+  g('rSC1').textContent=(s1/cnt).toFixed(1)+' px';
+  g('rSC2').textContent=(s2/cnt).toFixed(1)+' px';
+  g('smROI').innerHTML=`${meanAbsROI.toFixed(2)}<span class="mu">px</span>`;
+  g('smROImm').textContent=fmm(meanAbsROI);
+  g('smROIInfo').textContent=`Cols ${x0}–${x1} (${cnt} cols)`;
+}
+
+function cvCoords(cvs,ex,ey){const r=cvs.getBoundingClientRect(),sx=cvs.width/r.width,sy=cvs.height/r.height;return{x:Math.round((ex-r.left)*sx),y:Math.round((ey-r.top)*sy)};}
+
+// ── Superimpose canvas events ─────────────────────────────────
+const superC=g('superC');
+superC.addEventListener('mousemove',e=>{
+  if(!stiffDone)return;
+  const{x,y}=cvCoords(superC,e.clientX,e.clientY);
+  g('scoord').textContent=`x: ${x}  y: ${y}`;
+  const W=stiffDiffs?stiffDiffs.length:0;
+  if(x>=0&&x<W){
+    const d=stiffDiffs[x];
+    const tip=g('tip');
+    tip.textContent=`col ${x} | SC1:${sBounds1.scMid[x].toFixed(1)}px SC2:${sBounds2.scMid[x].toFixed(1)}px Δ:${d>=0?'+':''}${d.toFixed(2)}px / ${(d>=0?'+':'')}${fmm(d)}`;
+    tip.style.display='block';tip.style.left=(e.clientX+14)+'px';tip.style.top=(e.clientY-4)+'px';
+  }
+  if(stiffTool==='roi'&&roiDragging&&_roiStart){
+    const{x:sx,y:sy}=cvCoords(superC,_roiStart.cx,_roiStart.cy);
+    const rx=Math.min(sx,x),ry=Math.min(sy,y),rw=Math.abs(x-sx),rh=Math.abs(y-sy);
+    roi={x:rx,y:ry,w:rw,h:rh};redrawStiff();
+  }
+});
+superC.addEventListener('mouseleave',()=>{g('tip').style.display='none';});
+superC.addEventListener('mousedown',e=>{
+  if(!stiffDone||stiffTool!=='roi')return;
+  roiDragging=true;_roiStart={cx:e.clientX,cy:e.clientY};roi=null;
+  g('roiPopup').style.display='none';g('stClearROI').disabled=false;e.preventDefault();
+});
+superC.addEventListener('mouseup',e=>{
+  if(!stiffDone||!roiDragging)return;
+  roiDragging=false;
+  if(roi&&roi.w>8&&roi.h>4){
+    computeROIStats(roi);redrawStiff();
+    if(stiffView==='chart')drawAnnotChart();
+    // Position popup
+    const popup=g('roiPopup');popup.style.display='block';
+    const r=superC.getBoundingClientRect();
+    const px=r.left+(roi.x+roi.w)*(r.width/superC.width)+8;
+    const py=r.top+roi.y*(r.height/superC.height);
+    popup.style.left=Math.min(px,window.innerWidth-200)+'px';
+    popup.style.top=Math.max(10,py)+'px';
+  }else{roi=null;redrawStiff();}
+});
+document.addEventListener('mousedown',e=>{if(!g('roiPopup').contains(e.target)&&e.target!==superC)g('roiPopup').style.display='none';});
+
+// ── Stiffness compute ─────────────────────────────────────────
+function analyzeStiffness(){
+  if(!sOrig1||!sOrig2){notify('Load both images first',true);return;}
+  const btn=g('sabtn');btn.classList.add('ld');btn.disabled=true;
+  roi=null;g('roiPopup').style.display='none';
+  setTimeout(()=>{
+    try{
+      const p=getSP();
+      setStP(15,'SC detection — Image 1…');sBounds1=runSCOnly(sOrig1,p);
+      setStP(50,'SC detection — Image 2…');sBounds2=runSCOnly(sOrig2,p);
+      setStP(80,'Computing distances…');
+      const W=Math.min(sBounds1.W,sBounds2.W);
+      stiffDiffs=new Float32Array(W);
+      for(let c=0;c<W;c++)stiffDiffs[c]=sBounds2.scMid[c]-sBounds1.scMid[c];
+      let m1=0,m2=0,mAbs=0,maxAbs=-Infinity,minD=Infinity;
+      for(let c=0;c<W;c++){m1+=sBounds1.scMid[c];m2+=sBounds2.scMid[c];const ad=Math.abs(stiffDiffs[c]);mAbs+=ad;if(ad>maxAbs)maxAbs=ad;if(stiffDiffs[c]<minD)minD=stiffDiffs[c];}
+      const meanAbs=mAbs/W,mean1=m1/W,mean2=m2/W;
+      g('sm1').innerHTML=`${mean1.toFixed(1)}<span class="mu">px</span>`;g('sm1mm').textContent=fmm(mean1);
+      g('sm2').innerHTML=`${mean2.toFixed(1)}<span class="mu">px</span>`;g('sm2mm').textContent=fmm(mean2);
+      setMetricAbsPxMm('smD','smDmm',meanAbs);
+      setMetricAbsPxMm('smMax','smMaxmm',maxAbs);
+      setMetricPxMm('smMin','smMinmm',minD,true);
+      g('smCols').textContent=W;
+      g('ssz2').textContent=`${W}×${Math.min(sOrig1.height,sOrig2.height)}px`;
+      stiffDone=true;g('ssd').style.background='var(--grn)';
+      setStP(100,`Done · ${W} cols · mean|Δ|=${meanAbs.toFixed(2)}px / ${fmm(meanAbs)}`);
+      g('sexpbtn').disabled=false;g('srbtn').disabled=false;
+      redrawStiff();notify('SC distance computed!');
+    }catch(err){notify('Error: '+err.message,true);console.error(err);}
+    btn.classList.remove('ld');btn.disabled=false;
+  },60);
+}
+
+// ── View switching ────────────────────────────────────────────
+function setStiffView(v){
+  stiffView=v;
+  const map={superimpose:'Super',img1:'Img1',img2:'Img2',chart:'Chart'};
+  ['Super','Img1','Img2','Chart'].forEach(n=>g('vw'+n).style.display='none');
+  ['vtSuper','vtImg1','vtImg2','vtChart'].forEach(id=>g(id).classList.remove('on'));
+  g('vw'+map[v]).style.display=(v==='chart'?'flex':'flex');
+  g('vt'+map[v]).classList.add('on');
+  redrawStiff();
+}
+
+function setStiffTool(t){
+  stiffTool=t;
+  g('stView').classList.toggle('on',t==='view');
+  g('stROI').classList.toggle('on',t==='roi');
+  superC.style.cursor=t==='roi'?'crosshair':'default';
+}
+
+function clearROI(){
+  roi=null;roiDragging=false;_roiStart=null;
+  g('roiPopup').style.display='none';
+  g('smROI').textContent='—';g('smROImm').textContent='';g('smROIInfo').textContent='Draw rectangle to measure ROI';
+  g('stClearROI').disabled=true;
+  redrawStiff();
+}
+
+// ── Top mode switch ───────────────────────────────────────────
+function setTopMode(mode){
+  const isThick=mode==='thickness';
+  g('sbThick').style.display=isThick?'flex':'none';
+  g('sbStiff').style.display=isThick?'none':'flex';
+  g('contentThick').style.display=isThick?'flex':'none';
+  g('contentStiff').style.display=isThick?'none':'flex';
+  g('modeThick').classList.toggle('active',isThick);
+  g('modeStiff').classList.toggle('active',!isThick);
+  g('modeInfo').textContent=isThick?'SC / Dermis detection mode':'SC superimpose · ROI · 4-view stiffness workspace';
+}
+
+// ── Export ────────────────────────────────────────────────────
+function doExport(){const a=document.createElement('a');a.download='oct_thickness.png';a.href=CV.toDataURL();a.click();}
+function doStiffExport(){
+  let src;
+  if(stiffView==='superimpose')src=g('superC');
+  else if(stiffView==='img1')src=g('img1C');
+  else if(stiffView==='img2')src=g('img2C');
+  else src=g('annotChart');
+  const a=document.createElement('a');a.download=`oct_stiffness_${stiffView}.png`;a.href=src.toDataURL('image/png');a.click();
+}
+
+// ── Thickness UI ──────────────────────────────────────────────
+function analyze(){
+  if(!orig)return;
+  const btn=g('abtn');btn.classList.add('ld');btn.disabled=true;
+  setTimeout(()=>{
+    try{bounds=run(orig,getP());render(bounds);g('mST').innerHTML=`${bounds.scThick.toFixed(1)}<span class="mu">px</span>`;g('mSR').innerHTML=`${bounds.scTopMean.toFixed(1)}<span class="mu">px</span>`;g('mEG').innerHTML=`${bounds.epiGap.toFixed(1)}<span class="mu">px</span>`;g('expbtn').disabled=false;setSt(`SC=${bounds.scThick.toFixed(1)}px · Epi=${bounds.epiGap.toFixed(1)}px`,true);notify('Analysis complete!');}
+    catch(err){notify('Error: '+err.message,true);console.error(err);}
+    btn.classList.remove('ld');btn.disabled=false;
+  },50);
+}
+
+function setMode(m){curMode=m;g('tv').classList.toggle('on',m==='view');g('tm').classList.toggle('on',m==='measure');CV.style.cursor=m==='measure'?'crosshair':'default';g('clr').disabled=m!=='measure';}
+function clearM(){mpts=[];mlines=[];g('mMs').textContent='—';if(bounds)render(bounds);}
+
+CV.addEventListener('mousemove',e=>{
+  const r=CV.getBoundingClientRect(),sx=CV.width/r.width,sy=CV.height/r.height,x=Math.round((e.clientX-r.left)*sx),y=Math.round((e.clientY-r.top)*sy);
+  g('sco').textContent=`x: ${x}  y: ${y}`;
+  if(curMode==='measure'&&mpts.length===1){const tip=g('tip');const dx=x-mpts[0].x,dy=y-mpts[0].y;tip.textContent=`${Math.sqrt(dx*dx+dy*dy).toFixed(1)}px`;tip.style.display='block';tip.style.left=(e.clientX+14)+'px';tip.style.top=(e.clientY-4)+'px';}
+});
+CV.addEventListener('mouseleave',()=>g('tip').style.display='none');
+CV.addEventListener('click',e=>{
+  if(curMode!=='measure'||!bounds)return;
+  const r=CV.getBoundingClientRect(),sx=CV.width/r.width,sy=CV.height/r.height,x=Math.round((e.clientX-r.left)*sx),y=Math.round((e.clientY-r.top)*sy);
+  mpts.push({x,y});
+  if(mpts.length===2){const p1=mpts[0],p2=mpts[1],dx=p1.x-p2.x,dy=p1.y-p2.y,dist=Math.sqrt(dx*dx+dy*dy);mlines.push({x1:p1.x,y1:p1.y,x2:p2.x,y2:p2.y,d:dist});g('mMs').innerHTML=`${dist.toFixed(1)}<span class="mu">px</span>`;mpts=[];notify(`Measured: ${dist.toFixed(1)}px`);}
+  render(bounds);
+});
+
+function loadFile(f){const r=new FileReader();r.onload=e=>{const img=new Image();img.onload=()=>{CV.width=img.width;CV.height=img.height;cx.drawImage(img,0,0);orig=cx.getImageData(0,0,img.width,img.height);g('emp').style.display='none';g('abtn').disabled=false;g('rbtn').disabled=false;g('ssz').textContent=`${img.width}×${img.height}px`;setSt(`Loaded: ${f.name}`,true);notify('Image loaded — click Analyze');};img.src=e.target.result;};r.readAsDataURL(f);}
+function loadImgData(file,cb){const r=new FileReader();r.onload=e=>{const img=new Image();img.onload=()=>{const tmp=document.createElement('canvas');tmp.width=img.width;tmp.height=img.height;tmp.getContext('2d').drawImage(img,0,0);cb(tmp.getContext('2d').getImageData(0,0,img.width,img.height),file.name);};img.src=e.target.result;};r.readAsDataURL(file);}
+
+function setupStiffUpload(inputId,zoneId,nameId,imgNum){
+  const inp=g(inputId),zone=g(zoneId),nameEl=g(nameId);
+  const onLoad=f=>loadImgData(f,(imgData,name)=>{
+    if(imgNum===1)sOrig1=imgData;else sOrig2=imgData;
+    zone.classList.add('loaded');zone.querySelector('.upz-ico').textContent='✓';
+    nameEl.textContent=name.length>20?name.slice(0,17)+'…':name;
+    stiffDone=false;
+    if(sOrig1&&sOrig2){g('sabtn').disabled=false;g('sst').textContent='Both loaded → Compute SC Distance';notify('Both images ready!');}
+    else{g('sst').textContent=`Image ${imgNum} loaded`;}
+  });
+  inp.addEventListener('change',e=>{if(e.target.files[0])onLoad(e.target.files[0]);});
+  zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('drag');});
+  zone.addEventListener('dragleave',()=>zone.classList.remove('drag'));
+  zone.addEventListener('drop',e=>{e.preventDefault();zone.classList.remove('drag');if(e.dataTransfer.files[0])onLoad(e.dataTransfer.files[0]);});
+}
+setupStiffUpload('sf1','sup1','sn1',1);
+setupStiffUpload('sf2','sup2','sn2',2);
+
+// File events — thickness
+g('fi').addEventListener('change',e=>{if(e.target.files[0])loadFile(e.target.files[0]);});
+const uz=g('upz');
+uz.addEventListener('dragover',e=>{e.preventDefault();uz.classList.add('drag');});
+uz.addEventListener('dragleave',()=>uz.classList.remove('drag'));
+uz.addEventListener('drop',e=>{e.preventDefault();uz.classList.remove('drag');if(e.dataTransfer.files[0])loadFile(e.dataTransfer.files[0]);});
+g('cw').addEventListener('dragover',e=>e.preventDefault());
+g('cw').addEventListener('drop',e=>{e.preventDefault();if(e.dataTransfer.files[0])loadFile(e.dataTransfer.files[0]);});
+
+g('abtn').addEventListener('click',analyze);
+g('rbtn').addEventListener('click',()=>{if(!orig)return;cx.putImageData(orig,0,0);bounds=null;mpts=[];mlines=[];['mST','mSR','mEG','mMs'].forEach(id=>g(id).textContent='—');g('expbtn').disabled=true;setSt('Reset');notify('Reset');});
+g('sabtn').addEventListener('click',analyzeStiffness);
+g('srbtn').addEventListener('click',()=>{
+  sOrig1=null;sOrig2=null;sBounds1=null;sBounds2=null;stiffDiffs=null;stiffDone=false;roi=null;
+  ['superC','img1C','img2C'].forEach(id=>{const c=g(id);if(c){const ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height);}});
+  ['empSuper','empImg1','empImg2'].forEach(id=>g(id).style.display='flex');
+  ['sup1','sup2'].forEach(id=>{g(id).classList.remove('loaded');g(id).querySelector('.upz-ico').textContent='⬆';});
+  ['sn1','sn2'].forEach(id=>g(id).textContent='—');
+  ['sm1','sm2','smD','smMax','smMin','smCols'].forEach(id=>g(id).textContent='—');
+  ['sm1mm','sm2mm','smDmm','smMaxmm','smMinmm','smROImm'].forEach(id=>{if(g(id))g(id).textContent='';});
+  g('smROI').textContent='—';g('smROIInfo').textContent='Draw rectangle to measure ROI';
+  if(chartInst){chartInst.destroy();chartInst=null;}
+  g('roiPopup').style.display='none';g('sabtn').disabled=true;g('srbtn').disabled=true;g('sexpbtn').disabled=true;
+  g('ssd').style.background='var(--mute)';g('sst').textContent='Load 2 images → Compute SC Distance';g('ssz2').textContent='—';notify('Reset');
+});
+
+// Slider wiring — thickness
+[['art','vArt'],['dep','vDep'],['sig','vSig'],['thr','vThr'],['smo','vSmo'],['dmn','vDmn'],['dmx','vDmx'],['dpc','vDpc'],['dps','vDps'],['dsg','vDsg'],['dsm','vDsm'],['dsw','vDsw'],['lw','vLw']
+].forEach(([id,vid])=>g(id).addEventListener('input',()=>{g(vid).textContent=g(id).value;if(bounds&&id==='lw')render(bounds);}));
+['shT','shB','shM','shSCF','shEF','shD','shDF','cScT','cScB','cEpi','cDerm','lw'].forEach(id=>g(id).addEventListener('change',()=>{if(bounds)render(bounds);}));
+
+// Slider wiring — stiffness
+[['sart','svArt'],['sdep','svDep'],['ssig','svSig'],['sthr','svThr'],['ssmo','svSmo'],['sop1','svOp1'],['sop2','svOp2'],['sdens','svDens'],['slw','svLw']
+].forEach(([id,vid])=>g(id).addEventListener('input',()=>{g(vid).textContent=g(id).value;if(id==='sdens'){g('sdens2').value=g(id).value;g('sdens2val').textContent=g(id).value;}if(stiffDone)redrawStiff();}));
+['shAnno','shConn','shFill1','shFill2','shTicks','sc1col','sc2col','sdcol','sdneg','sroicol'].forEach(id=>{const el=g(id);if(el)el.addEventListener('change',()=>{if(stiffDone)redrawStiff();});});
+</script>
+</body>
+</html>
